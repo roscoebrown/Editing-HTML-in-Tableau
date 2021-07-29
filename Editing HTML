@@ -1,0 +1,133 @@
+from IPython.core.display import display, HTML
+from __future__ import print_function
+
+def openfile_dialog():
+    from PyQt4 import QtGui
+    app = QtGui.QApplication([dir])
+    fname = QtGui.QFileDialog.getOpenFileName(None, "Select a file...", '.', filter="All files (*)")
+    return str(fname)
+HH="<table width=\"100%\"><tr><td bgcolor=\"#D8D8D8\"><b>ID</b></td><td bgcolor=\"#D8D8D8\"><b>DASHBOARD NAME</b></td></tr>"
+WW="<table width=\"100%\"><tr><td bgcolor=\"#D8D8D8\"><b>ID</b></td><td bgcolor=\"#D8D8D8\"><b>WORKSHEET NAME</b></td></tr>"
+A=0
+B=0
+DLM=0
+Calcs=['0']
+Cleaner=['0']
+WLM=0
+k=0
+U=''
+turnoff=1
+output=open("C:\Tableau_Metadata.txt","w+") 
+STORE=openfile_dialog()
+display(HTML('<h2>VERSION INFORMATION</h2>'))
+with open(STORE) as filer:
+    for line in filer:
+        if line.find('<!-- build')>-1:
+            B="<table width=\"100%\"><tr><td bgcolor=\"#D8D8D8\"><b>FILENAME</b></td><td bgcolor=\"#D8D8D8\"><b>TABLEAU BUILD</b></td><td bgcolor=\"#D8D8D8\"><b>PLATFORM</b></td>"
+            B=B+"<td bgcolor=\"#D8D8D8\"><b>TABLEAU VERSION</b></td></tr>"
+            B=B+'<tr><td style=\"text-align:center;\">'+ STORE +'</td>'
+            B=B+'<td style=\"text-align:center;\">'+ line[11:11+19]+'</td>'
+        if line.find('source-platform=')>-1:
+            B=B+'<td style=\"text-align:center;\">'+line[line.find('=')+2:line.find('=')+5]+'</td>'
+        if line.find('source-platform')>-1:
+            B=B+'<td style=\"text-align:center;\">'+line[line.find('version=')+9:line.find('version=')+12]+'</td></tr></table>'
+            display(HTML(B)) 
+            display(HTML('<h2>DATASOURCES</h2>'))
+            
+        if line.find('datasource caption')>-1 and line.find('inline')>-1:
+            k=k+1
+            display(HTML('<h3>DATASOURCE '+str(k)+': '+ line[line.find('datasource caption')+20:line.find('inline')-2]+'</h3>'))
+            C="<table width=\"100%\"><tr><td bgcolor=\"#D8D8D8\"><b>DATASOURCE</b></td><td bgcolor=\"#D8D8D8\"><b>TYPE</b></td><td bgcolor=\"#D8D8D8\"><b>DRIVER VERSION</b></td>"
+            C=C+"<td bgcolor=\"#D8D8D8\"><b>FILE NAME</b></td>"
+            C=C+"<td bgcolor=\"#D8D8D8\"><b>SERVER</b></td><td bgcolor=\"#D8D8D8\"><b>TABLE</b></td><td bgcolor=\"#D8D8D8\"><b>TYPE</b></td></tr> "
+            C=C+'<tr><td>'+line[line.find('datasource caption')+20:line.find('inline')-2]+'</td>'
+            C=C+'<td>'+line[line.find('name')+6:line.find('version')-3]+'</td>'
+            C=C+'<td>'+line[line.find('version')+9:line.find('version')+12]+'</td>'
+            
+            line=filer.next()
+            if line.find('filename')>-1:
+                C=C + '<td>'+line[line.find('filename')+10:line.find('password')-2]+ '</td>'
+                
+            if line.find('server')>-1:
+                C=C + '<td>'+line[line.find('server')+8:line.find('server-oauth')-2]+ '</td>'
+            line=filer.next()
+            if line.find('table')>-1:
+                C=C + '<td>'+line[line.find('table')+7:line.find('type')-2]+ '</td>'
+                C=C + '<td>'+line[line.find('type')+6:line.find('/>')-2]+ '</td></tr></table>'
+                display(HTML(C))   
+        
+            A="<table width=\"100%\"><tr><td bgcolor=\"#D8D8D8\"><b>FIELD NAME</b></td><td bgcolor=\"#D8D8D8\"><b>TABLE</b></td><td bgcolor=\"#D8D8D8\"><b>ALIAS</b></td><td bgcolor=\"#D8D8D8\"><b>DATA TYPE</b></td></tr>"
+                        
+            while line.find('</metadata-records>')<0:
+                prev=line
+                line=filer.next()
+                if line.find('<remote-name')>-1:
+                    A=A+'<tr><td style=\"text-align:center;\">'+line[line.find('remote-name')+12:line.find('</remote')]+'</td>'
+                if line.find('<remote-alias')>-1:
+                    A=A+'<td style=\"text-align:center;\">'+line[line.find('remote-alias')+13:line.find('</remote')]+'</td>'
+                if line.find('<parent-name')>-1:
+                    A=A+'<td style=\"text-align:center;\">'+line[line.find('parent-name')+12:line.find('</parent')]+'</td>'
+                if line.find('<local-type')>-1:
+                    A=A+'<td style=\"text-align:center;\">'+line[line.find('local-type')+11:line.find('</local')]+'</td></tr>'
+            display(HTML(A+'</table>'))
+            
+            display(HTML('<h2>CALCULATIONS</h2>'))
+            CAL="<table width=\"100%\"><tr><td bgcolor=\"#D8D8D8\"><b>CALCULATED FIELD NAME</b></td><td bgcolor=\"#D8D8D8\"><b>DATA TYPE</b></td><td bgcolor=\"#D8D8D8\">"
+            CAL=CAL+"<b>ALIAS</b></td><td bgcolor=\"#D8D8D8\"><b>ROLE</b></td><td bgcolor=\"#D8D8D8\"><b>FORMULA</b></td></tr>"
+            
+            while line.find('</datasource>')<0:
+                prev=line
+                line=filer.next()
+                #Logic needs to be employed for Calculations to format the table correctly
+                if line.find('<calculation class=')>-1:
+                    if prev.find('param-domain-type')<0:
+                        Calcs.append(prev[prev.find('name')+6:prev.find('role')-2]+"|"+prev[prev.find('caption')+9:prev.find('datatype')-2])
+                        Cleaner.append(line[line.find('formula')+9:line.find(' />')-1]+'\n')
+                        CAL=CAL+"<tr><td>"+prev[prev.find('caption')+9:prev.find('datatype')-2]+"</td>"
+                        CAL=CAL+"<td>"+prev[prev.find('datatype')+10:prev.find('name')-2]+"</td>"
+                        CAL=CAL+"<td>"+prev[prev.find('name')+6:prev.find('role')-2]+"</td>"
+                        CAL=CAL+"<td>"+prev[prev.find('role')+6:prev.find(' type=')-1]+"</td>"
+                        CAL=CAL+"<td>"+line[line.find('formula')+9:line.find(' />')-1]+"</td></tr>"
+                    
+                if line.find('<extract count')>-1:
+                    line=filer.next()
+                    DDDD='<table width=\"100%\"><tr><td bgcolor=\"#D8D8D8\"><b>LAST EXTRACT DATE:</b></td><td>' + line[line.find('update-time')+12:line.find('>')] + '</td></tr></table>'
+                    display(HTML(DDDD))
+            display(HTML(CAL+"</table>"))
+            CAL=""
+            print('\n')
+       
+        if line.find('dashboard name')>-1:
+            DLM+=1 
+            HH=HH+'<tr><td>'+str(DLM)+'</td><td>'+line[line.find('name')+6:line.find('>')-1]+'</td></tr>'
+        if line.find('worksheet name')>-1:
+            WLM+=1 
+            WW=WW+'<tr><td>'+str(WLM)+'</td><td>'+line[line.find('name')+6:line.find('>')-1]+'</td></tr>'
+
+display(HTML(HH+"</table>"))
+display(HTML(WW+"</table>"))
+filer.close()
+
+display(HTML('<h2>PARAMETERS</h2>'))
+with open(STORE) as filer2:
+    for line in filer2:
+        if line.find('datasource hasconnection')>-1 and line.find('Parameters')>-1:
+            D="<table width=\"100%\"><tr><td bgcolor=\"#D8D8D8\"><b>PARAMETER NAME</b></td><td bgcolor=\"#D8D8D8\"><b>VALUES</b></td><td bgcolor=\"#D8D8D8\"><b>"
+            D=D+"MINIMUM VALUE</b></td><td bgcolor=\"#D8D8D8\"><b>MAXIMUM VALUE</b></td><td bgcolor=\"#D8D8D8\"><b>STEP SIZE</b></td></tr>"
+            while line.find('</datasource>')<0:
+                line=filer2.next()
+                if line.find('caption')>-1:
+                    k=0
+                    D=D+'<tr><td colspan=\"5\" ><b>'+line[line.find('caption')+9:line.find('datatype')-2] +'</b></td></tr>'
+                    while line.find('</column')<0:
+                        line=filer2.next()
+                        
+                        if line.find('<range granularity=')>-1:
+                            D=D+'<tr><td></td><td></td><td>'+ line[line.find('min=')+5: line.find('/>')-2]+'</td>'
+                            D=D+'<td>'+ line[line.find('max=')+5: line.find('min')-2]+'</td>'
+                            D=D+'<td>'+ line[line.find('ity=')+5: line.find('max')-2]+'</td></tr>'
+                        if line.find('<alias key')>-1:
+                            D=D+'<tr><td>    Option '+str(k)+'</td><td>'+ line[line.find('value')+7:line.find('/>')-2]+'</td><td></td><td></td><td></td></tr>'
+                            k+=1 
+            display(HTML(D+'</table>'))
+output.close()
